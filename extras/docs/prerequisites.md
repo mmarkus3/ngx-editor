@@ -4,12 +4,21 @@
 
 You must install all the following `peerDependencies` in order for `ngx-editor to work
 
-* [FontAwesome v4.7.0](https://fontawesome.com/v4.7.0/) - Toolbar icons
+* [CodeMirror](https://codemirror.net/) - Code Edit/Preview
+* [FontAwesome](https://fontawesome.com/v4.7.0/) - Toolbar icons
 * [NgxBootstrap](https://valor-software.com/ngx-bootstrap/) - Popover
 
 ## Note
 
-* `ngx-bootstrap` is a mandatory peerDependency which needs to be installed and there is no need for them to be imported.
+* `CodeMirror` and `ngx-bootstrap` are mandatory peerDependency which needs to be installed and there is no need for them to be imported.
+
+## Stylesheets
+
+Import codemirror`s css into your project
+
+```bash
+node_modules/codemirror/lib/codemirror.css
+```
 
 ## Modules
 

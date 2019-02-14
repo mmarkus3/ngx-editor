@@ -18,8 +18,8 @@ describe('NgxGrippieComponent', () => {
         NgxEditorComponent,
         MessageService,
         CommandExecutorService,
-        { provide: ElementRef, useValue: this },
-        { provide: Renderer2, useValue: this }
+        { provide: ElementRef, useValue: this.elementRef },
+        { provide: Renderer2, useValue: this.renderer }
       ]
     })
       .compileComponents();
@@ -34,4 +34,5 @@ describe('NgxGrippieComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
 });

@@ -1,10 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { HttpResponse } from '@angular/common/http';
+import { HttpEvent, HttpEventType, HttpResponse } from '@angular/common/http';
 import { PopoverConfig } from 'ngx-bootstrap';
 import { CommandExecutorService } from '../common/services/command-executor.service';
 import { MessageService } from '../common/services/message.service';
 import * as Utils from '../common/utils/ngx-editor.utils';
+import { Subject } from 'rxjs/Subject';
 
 @Component({
   selector: 'app-ngx-editor-toolbar',
@@ -14,12 +15,11 @@ import * as Utils from '../common/utils/ngx-editor.utils';
 })
 
 export class NgxEditorToolbarComponent implements OnInit {
+
   /** holds values of the insert link form */
   urlForm: FormGroup;
   /** holds values of the insert image form */
   imageForm: FormGroup;
-  /** holds values of the insert video form */
-  videoForm: FormGroup;
   /** set to false when image is being uploaded */
   uploadComplete = true;
   /** upload percentage */
@@ -28,14 +28,6 @@ export class NgxEditorToolbarComponent implements OnInit {
   isUploading = false;
   /** which tab to active for color insetion */
   selectedColorTab = 'textColor';
-  /** font family name */
-  fontName = '';
-  /** font size */
-  fontSize = '';
-  /** hex color code */
-  hexColor = '';
-  /** show/hide image uploader */
-  isImageUploader = false;
 
   /**
    * Editor configuration
@@ -43,13 +35,13 @@ export class NgxEditorToolbarComponent implements OnInit {
   @Input() config: any;
   @ViewChild('urlPopover') urlPopover;
   @ViewChild('imagePopover') imagePopover;
-  @ViewChild('videoPopover') videoPopover;
   @ViewChild('fontSizePopover') fontSizePopover;
   @ViewChild('colorPopover') colorPopover;
   /**
    * Emits an event when a toolbar button is clicked
    */
   @Output() execute: EventEmitter<string> = new EventEmitter<string>();
+  @Output() imageUpload: EventEmitter<any> = new EventEmitter<any>();
 
   constructor(private _popOverConfig: PopoverConfig,
     private _formBuilder: FormBuilder,
@@ -82,17 +74,21 @@ export class NgxEditorToolbarComponent implements OnInit {
    * create URL insert form
    */
   buildUrlForm(): void {
+
     this.urlForm = this._formBuilder.group({
       urlLink: ['', [Validators.required]],
       urlText: ['', [Validators.required]],
       urlNewTab: [true]
     });
+
+    return;
   }
 
   /**
    * inserts link in the editor
    */
   insertLink(): void {
+
     try {
       this._commandExecutorService.createLink(this.urlForm.value);
     } catch (error) {
@@ -103,26 +99,30 @@ export class NgxEditorToolbarComponent implements OnInit {
     this.buildUrlForm();
     /** close inset URL pop up */
     this.urlPopover.hide();
+
+    return;
   }
 
   /**
    * create insert image form
    */
-  buildImageForm(): void {
+  buildInsertImageForm(): void {
+
     this.imageForm = this._formBuilder.group({
       imageUrl: ['', [Validators.required]]
     });
+
+    return;
   }
 
-  /**
-   * create insert image form
-   */
-  buildVideoForm(): void {
-    this.videoForm = this._formBuilder.group({
-      videoUrl: ['', [Validators.required]],
-      height: [''],
-      width: ['']
-    });
+  private handleFileUrl(fileUrl): void {
+    try {
+      this._commandExecutorService.insertImage(fileUrl);
+    } catch (error) {
+      this._messageService.sendMessage(error.message);
+    }
+    this.uploadComplete = true;
+    this.isUploading = false;
   }
 
   /**
@@ -131,11 +131,22 @@ export class NgxEditorToolbarComponent implements OnInit {
    * @param e onChange event
    */
   onFileChange(e): void {
+
     this.uploadComplete = false;
     this.isUploading = true;
 
     if (e.target.files.length > 0) {
       const file = e.target.files[0];
+
+      if (this.imageUpload.observers.length) {
+        const obs = new Subject<string>();
+        obs.asObservable().subscribe(fileUrl => {
+          this.handleFileUrl(fileUrl);
+        });
+        const item = { file: file, obs: obs };
+        this.imageUpload.emit(item);
+        return;
+      }
 
       try {
         this._commandExecutorService.uploadImage(file, this.config.imageEndPoint).subscribe(event => {
@@ -145,13 +156,7 @@ export class NgxEditorToolbarComponent implements OnInit {
           }
 
           if (event instanceof HttpResponse) {
-            try {
-              this._commandExecutorService.insertImage(event.body.url);
-            } catch (error) {
-              this._messageService.sendMessage(error.message);
-            }
-            this.uploadComplete = true;
-            this.isUploading = false;
+            this.handleFileUrl(event.body.url);
           }
         });
       } catch (error) {
@@ -159,7 +164,10 @@ export class NgxEditorToolbarComponent implements OnInit {
         this.uploadComplete = true;
         this.isUploading = false;
       }
+
     }
+
+    return;
   }
 
   /** insert image in the editor */
@@ -171,27 +179,16 @@ export class NgxEditorToolbarComponent implements OnInit {
     }
 
     /** reset form to default */
-    this.buildImageForm();
+    this.buildInsertImageForm();
     /** close inset URL pop up */
     this.imagePopover.hide();
-  }
 
-  /** insert image in the editor */
-  insertVideo(): void {
-    try {
-      this._commandExecutorService.insertVideo(this.videoForm.value);
-    } catch (error) {
-      this._messageService.sendMessage(error.message);
-    }
-
-    /** reset form to default */
-    this.buildVideoForm();
-    /** close inset URL pop up */
-    this.videoPopover.hide();
+    return;
   }
 
   /** inser text/background color */
   insertColor(color: string, where: string): void {
+
     try {
       this._commandExecutorService.insertColor(color, where);
     } catch (error) {
@@ -199,10 +196,12 @@ export class NgxEditorToolbarComponent implements OnInit {
     }
 
     this.colorPopover.hide();
+    return;
   }
 
   /** set font size */
   setFontSize(fontSize: string): void {
+
     try {
       this._commandExecutorService.setFontSize(fontSize);
     } catch (error) {
@@ -210,22 +209,12 @@ export class NgxEditorToolbarComponent implements OnInit {
     }
 
     this.fontSizePopover.hide();
-  }
-
-  /** set font Name/family */
-  setFontName(fontName: string): void {
-    try {
-      this._commandExecutorService.setFontName(fontName);
-    } catch (error) {
-      this._messageService.sendMessage(error.message);
-    }
-
-    this.fontSizePopover.hide();
+    return;
   }
 
   ngOnInit() {
     this.buildUrlForm();
-    this.buildImageForm();
-    this.buildVideoForm();
+    this.buildInsertImageForm();
   }
+
 }

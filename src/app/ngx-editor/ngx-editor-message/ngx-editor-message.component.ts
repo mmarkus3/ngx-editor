@@ -9,6 +9,7 @@ import { MessageService } from '../common/services/message.service';
 })
 
 export class NgxEditorMessageComponent {
+
   /** property that holds the message to be displayed on the editor */
   ngxMessage = undefined;
 
@@ -24,5 +25,6 @@ export class NgxEditorMessageComponent {
    */
   clearMessage(): void {
     this.ngxMessage = undefined;
+    return;
   }
 }
